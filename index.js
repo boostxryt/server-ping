@@ -37,7 +37,7 @@ async function checkRobloxStatusDirect() {
         const idLijst = usersToMonitor.map(u => u.id).join(',');
         if (!idLijst) return;
 
-        // Dit is de 100% correcte link zonder ingewikkelde tekens:
+        // Vaste tekstkoppeling zonder rare leestekens naar de ECHTE Roblox servers
         const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
@@ -49,7 +49,6 @@ async function checkRobloxStatusDirect() {
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // Log de status live
             console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
         });
     } catch (error) {
