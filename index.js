@@ -34,49 +34,40 @@ client.once(Events.ClientReady, () => {
     console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
     
     // Start de timer om elke X seconden de status te controleren
-    setInterval(checkRobloxPresence, checkInterval);
-});
-
 async function checkRobloxPresence() {
     try {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
         if (userIds.length === 0) return;
         
-        // DE CORRECTE PROXY URL VOOR PRESENCE
-  const response = await axios.post('https://ff-roproxy.com', { userIds });
+        const response = await axios.post('https://roproxy.net', { userIds });
 
+        if (!response.data || !response.data.userPresences) {
+            console.log("⚠️ De proxy gaf geen spelerdata terug.");
+            return;
+        }
 
-
-
-
-        if (!response.data || !response.data.userPresences) return;
-
-        const channel = await client.channels.fetch(channelId);
-        if (!channel) return console.error("Discord kanaal niet gevonden!");
+        const channel = await client.channels.fetch(channelId).catch(() => null);
 
         response.data.userPresences.forEach(presence => {
             const monitoredUser = usersToMonitor.find(u => u.id === presence.userId.toString());
             if (!monitoredUser) return;
 
-            // Type 0 = Offline, 1 = Website, 2 = In Game, 3 = Studio
+            // DIT GAAT ONS DE ANTWOORDEN GEVEN IN RAILWAY:
+            // 0 = Offline, 1 = Website, 2 = In Game, 3 = Studio
+            console.log(`[TEST] Live status voor ${monitoredUser.name}: ${presence.userPresenceType}`);
+
             const currentlyOnline = presence.userPresenceType > 0;
 
             if (currentlyOnline && !monitoredUser.isOnline) {
-                // Speler is net online gekomen!
                 monitoredUser.isOnline = true;
                 let statusText = "online op Roblox";
                 if (presence.userPresenceType === 2) {
                     statusText = `aan het spelen in game: **${presence.lastLocation || 'Onbekende Game'}**`;
                 }
-
-                channel.send(`🟢 Speler **${monitoredUser.name}** is zojuist ${statusText}!`);
-                console.log(`[ALERT] ${monitoredUser.name} is online gegaan.`);
+                if (channel) channel.send(`🟢 Speler **${monitoredUser.name}** is zojuist ${statusText}!`);
             } else if (!currentlyOnline && monitoredUser.isOnline) {
-                // Speler is offline gegaan
                 monitoredUser.isOnline = false;
-                
-                channel.send(`🔴 Speler **${monitoredUser.name}** is zojuist offline gegaan!`);
-                console.log(`[INFO] ${monitoredUser.name} is offline gegaan.`);
+                if (channel) channel.send(`🔴 Speler **${monitoredUser.name}** is zojuist offline gegaan!`);
             }
         });
     } catch (error) {
