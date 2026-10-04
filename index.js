@@ -45,6 +45,7 @@ async function checkRobloxPresence() {
         // DE CORRECTE PROXY URL VOOR PRESENCE
         const response = await axios.post('https://roproxy.com', { userIds });
 
+
         if (!response.data || !response.data.userPresences) return;
 
         const channel = await client.channels.fetch(channelId);
