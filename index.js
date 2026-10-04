@@ -42,7 +42,8 @@ async function checkRobloxPresence() {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
         if (userIds.length === 0) return;
         
-const response = await axios.post('https://rblx.name', { userIds });
+const response = await axios.post('https://roblox.com.de', { userIds });
+
 
 
         if (!response.data || !response.data.userPresences) {
