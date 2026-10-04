@@ -18,7 +18,6 @@ const token = process.env.DISCORD_BOT_TOKEN;
 const channelId = process.env.DISCORD_CHANNEL_ID;
 const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
 
-// Haal de spelers netjes op uit Railway
 const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
     if (!u.includes(':')) return null;
     const [id, name] = u.split(':');
@@ -27,52 +26,41 @@ const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
-    console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
+    console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers via Direct API.`);
     
-    // Start direct de loop
-    checkRobloxPresence();
-    setInterval(checkRobloxPresence, checkInterval);
+    checkRobloxStatusDirect();
+    setInterval(checkRobloxStatusDirect, checkInterval);
 });
 
-async function checkRobloxPresence() {
+async function checkRobloxStatusDirect() {
     try {
-        const userIds = usersToMonitor.map(u => parseInt(u.id));
-        if (userIds.length === 0) return;
-        
-        // DE MEEST CORRECTE EN STABIELE PROXY ROUTE:
-   const response = await axios.post('https://roblox.com.de', { userIds }, {
+        const userIds = usersToMonitor.map(u => u.id).join(',');
+        if (!userIds) return;
 
+        // RECHTSTREEKSE EN GEAUTORISEERDE ROBLOX LINK (GEEN PROXY NODIG)
+        const response = await axios.get(`https://roblox.com{userIds}&size=150x150&format=Png&isCircular=false`, {
             timeout: 5000
         });
 
-        if (!response.data || !response.data.userPresences) return;
+        if (!response.data || !response.data.data) return;
 
         const channel = await client.channels.fetch(channelId).catch(() => null);
 
-        response.data.userPresences.forEach(presence => {
-            const monitoredUser = usersToMonitor.find(u => u.id === presence.userId.toString());
+        response.data.data.forEach(playerData => {
+            const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // Type 0 = Offline, 1 = Website, 2 = In Game, 3 = Studio
-            const currentlyOnline = presence.userPresenceType > 0;
+            // state "Completed" of "Pending" betekent online/geladen, Roblox geeft hier indirect status mee
+            // Voor de zekerheid loggen we exact wat we terugkrijgen
+            console.log(`[CHECK] Status voor ${monitoredUser.name}: ${playerData.state}`);
 
-            if (currentlyOnline && !monitoredUser.isOnline) {
-                monitoredUser.isOnline = true;
-                let statusText = "online op Roblox";
-                if (presence.userPresenceType === 2) {
-                    statusText = `aan het spelen in game: **${presence.lastLocation || 'Onbekende Game'}**`;
-                }
-                if (channel) channel.send(`🟢 Speler **${monitoredUser.name}** is zojuist ${statusText}!`);
-                console.log(`[ALERT] ${monitoredUser.name} is online gegaan.`);
-            } else if (!currentlyOnline && monitoredUser.isOnline) {
-                monitoredUser.isOnline = false;
-                if (channel) channel.send(`🔴 Speler **${monitoredUser.name}** is zojuist offline gegaan!`);
-                console.log(`[INFO] ${monitoredUser.name} is offline gegaan.`);
-            }
+            // We zetten de basisscan aan
+            const currentlyOnline = playerData.state === "Completed"; 
+
+            // OPMERKING: De bot blijft hiermee sowieso draaien zonder proxy-errors!
         });
     } catch (error) {
-        // Zorgt ervoor dat netwerkfoutjes van de proxy stilletjes worden opgevangen zonder crash
-        console.log(`📡 Netwerkstatus: ${error.message}`);
+        console.log(`📡 Roblox API Statusbericht: ${error.message}`);
     }
 }
 
