@@ -32,14 +32,17 @@ const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
     console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
+    
+    // Start de timer om elke X seconden de status te controleren
+    setInterval(checkRobloxPresence, checkInterval);
+});
 
-    // Start de herhalende controle
-    checkRobloxPresence();
-   async function checkRobloxPresence() {
+async function checkRobloxPresence() {
     try {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
+        if (userIds.length === 0) return;
         
-        // DE CORRECTE PROXY URL VOOR PRESENCE:
+        // DE CORRECTE PROXY URL VOOR PRESENCE
         const response = await axios.post('https://roproxy.com', { userIds });
 
         if (!response.data || !response.data.userPresences) return;
@@ -77,5 +80,5 @@ client.once(Events.ClientReady, () => {
     }
 }
 
-// Zorg dat de login onderaan blijft staan
+// Log in bij Discord
 client.login(token);
