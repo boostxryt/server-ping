@@ -42,7 +42,8 @@ async function checkRobloxPresence() {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
         if (userIds.length === 0) return;
         
-        const response = await axios.post('https://roproxy.net', { userIds });
+  const response = await axios.post('https://roproxy.net', { userIds });
+
 
         if (!response.data || !response.data.userPresences) {
             console.log("⚠️ De proxy gaf geen spelerdata terug.");
