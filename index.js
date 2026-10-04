@@ -18,6 +18,7 @@ const token = process.env.DISCORD_BOT_TOKEN;
 const channelId = process.env.DISCORD_CHANNEL_ID;
 const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
 
+// Haal de spelers strak op uit Railway
 const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
     if (!u.includes(':')) return null;
     const [id, name] = u.split(':');
@@ -28,6 +29,7 @@ client.once(Events.ClientReady, () => {
     console.log('🤖 Bot is succesvol opgestart als ' + client.user.tag + '!');
     console.log('📡 Ik volg momenteel ' + usersToMonitor.length + ' Roblox spelers.');
     
+    // Start direct de loop
     checkRobloxStatusDirect();
     setInterval(checkRobloxStatusDirect, checkInterval);
 });
@@ -37,12 +39,12 @@ async function checkRobloxStatusDirect() {
         const idLijst = usersToMonitor.map(u => u.id).join(',');
         if (!idLijst) return;
 
-        // Vaste tekstkoppeling zonder rare leestekens naar de ECHTE Roblox servers
+        // GEEN INGEWIKKELDE BACKTICKS OF DOLLARTEKENS MEER: PUUR GEWONE TEKST KOPPELING
         const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
+        
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
-const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
 
         const channel = await client.channels.fetch(channelId).catch(() => null);
 
@@ -50,6 +52,8 @@ const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&i
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
+            // In de Roblox Thumbnails API betekent state "Completed" of "Pending" dat het profiel geladen/actief is.
+            // We loggen dit strak in de console van Railway
             console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
         });
     } catch (error) {
