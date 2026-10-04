@@ -1,14 +1,14 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Events } = require('discord.js'); // Events toegevoegd op regel 1
 const axios = require('axios');
 
 // Controleer of de belangrijkste variabelen aanwezig zijn
-if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CHANNEL_ID || !process.env.ROBLOX_USERS) {
+if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CHANNEL_ID || !process.env.DISCORD_ROBLOX_USERS) {
     console.error("Fout: Misbepaalde omgevingsvariabelen! Controleer DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID en ROBLOX_USERS op Render.");
     process.exit(1);
 }
 
 const client = new Client({
-    intents: [
+    Intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildPresences
@@ -26,10 +26,11 @@ const usersToMonitor = process.env.ROBLOX_USERS.split(',').map(u => {
     return { id: id.trim(), name: name.trim(), isOnline: false };
 });
 
-client.once('ready', () => {
-    console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
-    console.log(`👀 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
-    
+// HIER GEBRUIKEN WE NU DE JUISTE clientReady EVENT:
+client.once(Events.ClientReady, () => {
+    console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`); // Typfout met \(() gecorrigeerd naar\){}
+    console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
+
     // Start de herhalende controle
     checkRobloxPresence();
     setInterval(checkRobloxPresence, checkInterval);
