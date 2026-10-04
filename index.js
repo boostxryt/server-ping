@@ -33,7 +33,10 @@ client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
     console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
     
-    // Start de timer om elke X seconden de status te controleren
+    // Start de timer om elke X seconden te controleren
+    setInterval(checkRobloxPresence, checkInterval);
+});
+
 async function checkRobloxPresence() {
     try {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
@@ -52,8 +55,7 @@ async function checkRobloxPresence() {
             const monitoredUser = usersToMonitor.find(u => u.id === presence.userId.toString());
             if (!monitoredUser) return;
 
-            // DIT GAAT ONS DE ANTWOORDEN GEVEN IN RAILWAY:
-            // 0 = Offline, 1 = Website, 2 = In Game, 3 = Studio
+            // DIT PRINT DE LIVE STATUS IN RAILWAY (0 = offline, 1 = website, 2 = in game)
             console.log(`[TEST] Live status voor ${monitoredUser.name}: ${presence.userPresenceType}`);
 
             const currentlyOnline = presence.userPresenceType > 0;
