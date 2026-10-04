@@ -1,7 +1,6 @@
 const { Client, GatewayIntentBits, Events } = require('discord.js');
 const axios = require('axios');
 
-// Log de status van de variabelen in plaats van de bot direct te crashen
 console.log("=== OMGEVINGSVARIABELEN CHECK ===");
 console.log("DISCORD_BOT_TOKEN aanwezig:", process.env.DISCORD_BOT_TOKEN ? "JA" : "NEE");
 console.log("DISCORD_CHANNEL_ID aanwezig:", process.env.DISCORD_CHANNEL_ID ? "JA" : "NEE");
@@ -11,29 +10,26 @@ console.log("=================================");
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildPresences
+        GatewayIntentBits.GuildMessages
     ]
 });
 
-// Instellingen uitlezen
 const token = process.env.DISCORD_BOT_TOKEN;
 const channelId = process.env.DISCORD_CHANNEL_ID;
 const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
 
-// Roblox gebruikers splitsen (ID:Naam)
 const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
     if (!u.includes(':')) return null;
     const [id, name] = u.split(':');
     return { id: id.trim(), name: name.trim(), isOnline: false };
 }).filter(Boolean);
 
-// Juiste clientReady event
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
     console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
     
-    // Start de timer om elke X seconden te controleren
+    // Start direct met controleren en herhaal elke X seconden
+    checkRobloxPresence();
     setInterval(checkRobloxPresence, checkInterval);
 });
 
@@ -42,12 +38,13 @@ async function checkRobloxPresence() {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
         if (userIds.length === 0) return;
         
-const response = await axios.post('https://roblox.com.de', { userIds });
-
-
+        // DE MEEST STABIELE RECHTSTREEKSE ROUTE VIA ROBLOX PROXY OORLOG
+        const response = await axios.post('https://roproxy.com', { userIds }, {
+            timeout: 5000 // Als de proxy binnen 5 seconden niet reageert, breekt hij af zonder crash
+        });
 
         if (!response.data || !response.data.userPresences) {
-            console.log("⚠️ De proxy gaf geen spelerdata terug.");
+            console.log("⚠️ De proxy reageerde wel, maar stuurde geen geldige data.");
             return;
         }
 
@@ -57,9 +54,10 @@ const response = await axios.post('https://roblox.com.de', { userIds });
             const monitoredUser = usersToMonitor.find(u => u.id === presence.userId.toString());
             if (!monitoredUser) return;
 
-            // DIT PRINT DE LIVE STATUS IN RAILWAY (0 = offline, 1 = website, 2 = in game)
-            console.log(`[TEST] Live status voor ${monitoredUser.name}: ${presence.userPresenceType}`);
+            // Log de status live in Railway om te zien wat er gebeurt
+            console.log(`[STATUS-CHECK] ${monitoredUser.name} is momenteel type: ${presence.userPresenceType}`);
 
+            // Type 0 = Offline, 1 = Website, 2 = In Game, 3 = Studio
             const currentlyOnline = presence.userPresenceType > 0;
 
             if (currentlyOnline && !monitoredUser.isOnline) {
@@ -75,9 +73,9 @@ const response = await axios.post('https://roblox.com.de', { userIds });
             }
         });
     } catch (error) {
-        console.error("Fout bij het ophalen van Roblox status:", error.message);
+        // Zorgt ervoor dat foutcode 500 of 405 de bot NIET laat crashen
+        console.log(`📡 Proxy statusbericht: ${error.message}`);
     }
 }
 
-// Log in bij Discord
 client.login(token);
