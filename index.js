@@ -25,8 +25,8 @@ const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
 }).filter(Boolean);
 
 client.once(Events.ClientReady, () => {
-    console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
-    console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers via Direct API.`);
+    console.log('🤖 Bot is succesvol opgestart als ' + client.user.tag + '!');
+    console.log('📡 Ik volg momenteel ' + usersToMonitor.length + ' Roblox spelers via Direct API.');
     
     checkRobloxStatusDirect();
     setInterval(checkRobloxStatusDirect, checkInterval);
@@ -34,16 +34,10 @@ client.once(Events.ClientReady, () => {
 
 async function checkRobloxStatusDirect() {
     try {
-        const userIds = usersToMonitor.map(u => u.id).join(',');
-        if (!userIds) return;
-async function checkRobloxStatusDirect() {
-    try {
         const idLijst = usersToMonitor.map(u => u.id).join(',');
         if (!idLijst) return;
 
-        // GEEN INGEWIKKELDE UTILS: GEWONE APARTE TEKST DIKTE
         const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
-        
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
@@ -54,10 +48,13 @@ async function checkRobloxStatusDirect() {
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // Log de pure data van Roblox in Railway zodat we het zien werken!
-            console.log('[LOG] Verbinding gelukt voor ' + monitoredUser.name + ' - Status: ' + playerData.state);
+            // Roblox geeft bij de avatar API de 'state' mee. 
+            // Als de speler in-game zit, verandert de avatar of de laadstatus vaak live.
+            console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
         });
     } catch (error) {
         console.log('📡 Statusbericht: ' + error.message);
     }
 }
+
+client.login(token);
