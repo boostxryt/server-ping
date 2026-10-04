@@ -42,6 +42,7 @@ async function checkRobloxStatusDirect() {
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
+const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
 
         const channel = await client.channels.fetch(channelId).catch(() => null);
 
