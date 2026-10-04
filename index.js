@@ -38,9 +38,9 @@ async function checkRobloxPresence() {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
         if (userIds.length === 0) return;
         
-        // DE MEEST STABIELE RECHTSTREEKSE ROUTE VIA ROBLOX PROXY OORLOG
-        const response = await axios.post('https://roproxy.com', { userIds }, {
-            timeout: 5000 // Als de proxy binnen 5 seconden niet reageert, breekt hij af zonder crash
+        // DE MEEST STABIELE RECHTSTREEKSE ROUTE VIA EEN UP-TO-DATE COMMUNITY PROXY
+        const response = await axios.post('https://roproxy.org', { userIds }, {
+            timeout: 5000 
         });
 
         if (!response.data || !response.data.userPresences) {
@@ -73,7 +73,6 @@ async function checkRobloxPresence() {
             }
         });
     } catch (error) {
-        // Zorgt ervoor dat foutcode 500 of 405 de bot NIET laat crashen
         console.log(`📡 Proxy statusbericht: ${error.message}`);
     }
 }
