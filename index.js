@@ -40,7 +40,8 @@ async function checkRobloxPresence() {
         if (userIds.length === 0) return;
         
         // DE MEEST CORRECTE EN STABIELE PROXY ROUTE:
-        const response = await axios.post('https://roproxy.org', { userIds }, {
+   const response = await axios.post('https://roblox.com.de', { userIds }, {
+
             timeout: 5000
         });
 
