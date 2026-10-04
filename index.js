@@ -38,7 +38,7 @@ client.once('ready', () => {
 async function checkRobloxPresence() {
     try {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
-        const response = await axios.post('https://roblox.com', { userIds });
+        const response = await axios.post('https://roproxy.com', { userIds });
         
         if (!response.data || !response.data.userPresences) return;
 
