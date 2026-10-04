@@ -1,14 +1,15 @@
-const { Client, GatewayIntentBits, Events } = require('discord.js'); // Events toegevoegd op regel 1
+const { Client, GatewayIntentBits, Events } = require('discord.js');
 const axios = require('axios');
 
-// Controleer of de belangrijkste variabelen aanwezig zijn
-if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CHANNEL_ID || !process.env.DISCORD_ROBLOX_USERS) {
-    console.error("Fout: Misbepaalde omgevingsvariabelen! Controleer DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID en ROBLOX_USERS op Render.");
-    process.exit(1);
-}
+// Log de status van de variabelen in plaats van de bot direct te crashen
+console.log("=== OMGEVINGSVARIABELEN CHECK ===");
+console.log("DISCORD_BOT_TOKEN aanwezig:", process.env.DISCORD_BOT_TOKEN ? "JA" : "NEE");
+console.log("DISCORD_CHANNEL_ID aanwezig:", process.env.DISCORD_CHANNEL_ID ? "JA" : "NEE");
+console.log("ROBLOX_USERS aanwezig:", process.env.ROBLOX_USERS ? "JA" : "NEE");
+console.log("=================================");
 
 const client = new Client({
-    Intents: [
+    intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildPresences
@@ -21,14 +22,15 @@ const channelId = process.env.DISCORD_CHANNEL_ID;
 const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
 
 // Roblox gebruikers splitsen (ID:Naam)
-const usersToMonitor = process.env.ROBLOX_USERS.split(',').map(u => {
+const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
+    if (!u.includes(':')) return null;
     const [id, name] = u.split(':');
     return { id: id.trim(), name: name.trim(), isOnline: false };
-});
+}).filter(Boolean);
 
-// HIER GEBRUIKEN WE NU DE JUISTE clientReady EVENT:
+// Juiste clientReady event
 client.once(Events.ClientReady, () => {
-    console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`); // Typfout met \(() gecorrigeerd naar\){}
+    console.log(`🤖 Bot is succesvol opgestart als ${client.user.tag}!`);
     console.log(`📡 Ik volg momenteel ${usersToMonitor.length} Roblox spelers.`);
 
     // Start de herhalende controle
