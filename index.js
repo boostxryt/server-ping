@@ -35,14 +35,13 @@ client.once(Events.ClientReady, () => {
 
     // Start de herhalende controle
     checkRobloxPresence();
-    setInterval(checkRobloxPresence, checkInterval);
-});
-
-async function checkRobloxPresence() {
+   async function checkRobloxPresence() {
     try {
         const userIds = usersToMonitor.map(u => parseInt(u.id));
-        const response = await axios.post('https://roproxy.net', { userIds });
         
+        // DE CORRECTE PROXY URL VOOR PRESENCE:
+        const response = await axios.post('https://roproxy.com', { userIds });
+
         if (!response.data || !response.data.userPresences) return;
 
         const channel = await client.channels.fetch(channelId);
@@ -59,13 +58,17 @@ async function checkRobloxPresence() {
                 // Speler is net online gekomen!
                 monitoredUser.isOnline = true;
                 let statusText = "online op Roblox";
-                if (presence.userPresenceType === 2) statusText = `aan het spelen in game: **${presence.lastLocation || 'Onbekende Game'}**`;
-                
-                channel.send(`🎮 **${monitoredUser.name}** is zojuist ${statusText}!`);
+                if (presence.userPresenceType === 2) {
+                    statusText = `aan het spelen in game: **${presence.lastLocation || 'Onbekende Game'}**`;
+                }
+
+                channel.send(`🟢 Speler **${monitoredUser.name}** is zojuist ${statusText}!`);
                 console.log(`[ALERT] ${monitoredUser.name} is online gegaan.`);
             } else if (!currentlyOnline && monitoredUser.isOnline) {
                 // Speler is offline gegaan
                 monitoredUser.isOnline = false;
+                
+                channel.send(`🔴 Speler **${monitoredUser.name}** is zojuist offline gegaan!`);
                 console.log(`[INFO] ${monitoredUser.name} is offline gegaan.`);
             }
         });
@@ -74,5 +77,5 @@ async function checkRobloxPresence() {
     }
 }
 
+// Zorg dat de login onderaan blijft staan
 client.login(token);
-
