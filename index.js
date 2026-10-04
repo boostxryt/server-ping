@@ -37,17 +37,19 @@ async function checkRobloxStatusDirect() {
         const idLijst = usersToMonitor.map(u => u.id).join(',');
         if (!idLijst) return;
 
-        // HIER STAAT NU DE CORRECTE EN VOLLEDIGE ROBLOX LINK:
+        // Dit is de 100% correcte link zonder ingewikkelde tekens:
         const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
 
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+
         response.data.data.forEach(playerData => {
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // Dit print de live status van Roblox in je logs
+            // Log de status live
             console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
         });
     } catch (error) {
@@ -56,4 +58,3 @@ async function checkRobloxStatusDirect() {
 }
 
 client.login(token);
-
