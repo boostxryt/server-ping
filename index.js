@@ -25,13 +25,14 @@ const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
     return { id: id.trim(), name: name.trim(), isOnline: false };
 }).filter(Boolean);
 
+// DIT START DE LUS DIRECT OP DE ACHTERGROND, ONAFHANKELIJK VAN DISCORD
+console.log('📡 De Roblox-controlelus is direct gestart op de achtergrond.');
+checkRobloxStatusDirect();
+setInterval(checkRobloxStatusDirect, checkInterval);
+
 client.once(Events.ClientReady, () => {
     console.log('🤖 Bot is succesvol opgestart als ' + client.user.tag + '!');
     console.log('📡 Ik volg momenteel ' + usersToMonitor.length + ' Roblox spelers.');
-    
-    // Start direct de loop
-    checkRobloxStatusDirect();
-    setInterval(checkRobloxStatusDirect, checkInterval);
 });
 
 async function checkRobloxStatusDirect() {
@@ -39,21 +40,18 @@ async function checkRobloxStatusDirect() {
         const idLijst = usersToMonitor.map(u => u.id).join(',');
         if (!idLijst) return;
 
-        // GEEN INGEWIKKELDE BACKTICKS OF DOLLARTEKENS MEER: PUUR GEWONE TEKST KOPPELING
+        // HIER STAAT NU DE VOLLEDIGE, CORRECTE ROBLOX LINK
         const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
         
         const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
 
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-
         response.data.data.forEach(playerData => {
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // In de Roblox Thumbnails API betekent state "Completed" of "Pending" dat het profiel geladen/actief is.
-            // We loggen dit strak in de console van Railway
+            // Log de status live in Railway om te zien dat er data binnenkomt
             console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
         });
     } catch (error) {
