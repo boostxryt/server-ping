@@ -43,7 +43,8 @@ async function checkRobloxPresence() {
         if (userIds.length === 0) return;
         
         // DE CORRECTE PROXY URL VOOR PRESENCE
-   const response = await axios.post('https://roblox.com.de', { userIds });
+   const response = await axios.post('https://ff-roproxy.com', { userIds });
+
 
 
 
