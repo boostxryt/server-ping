@@ -36,11 +36,15 @@ async function checkRobloxStatusDirect() {
     try {
         const userIds = usersToMonitor.map(u => u.id).join(',');
         if (!userIds) return;
+async function checkRobloxStatusDirect() {
+    try {
+        const idLijst = usersToMonitor.map(u => u.id).join(',');
+        if (!idLijst) return;
 
-        // RECHTSTREEKSE EN GEAUTORISEERDE ROBLOX LINK (GEEN PROXY NODIG)
-        const response = await axios.get(`https://roblox.com{userIds}&size=150x150&format=Png&isCircular=false`, {
-            timeout: 5000
-        });
+        // GEEN INGEWIKKELDE UTILS: GEWONE APARTE TEKST DIKTE
+        const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
+        
+        const response = await axios.get(completeUrl, { timeout: 5000 });
 
         if (!response.data || !response.data.data) return;
 
@@ -50,18 +54,10 @@ async function checkRobloxStatusDirect() {
             const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
             if (!monitoredUser) return;
 
-            // state "Completed" of "Pending" betekent online/geladen, Roblox geeft hier indirect status mee
-            // Voor de zekerheid loggen we exact wat we terugkrijgen
-            console.log(`[CHECK] Status voor ${monitoredUser.name}: ${playerData.state}`);
-
-            // We zetten de basisscan aan
-            const currentlyOnline = playerData.state === "Completed"; 
-
-            // OPMERKING: De bot blijft hiermee sowieso draaien zonder proxy-errors!
+            // Log de pure data van Roblox in Railway zodat we het zien werken!
+            console.log('[LOG] Verbinding gelukt voor ' + monitoredUser.name + ' - Status: ' + playerData.state);
         });
     } catch (error) {
-        console.log(`📡 Roblox API Statusbericht: ${error.message}`);
+        console.log('📡 Statusbericht: ' + error.message);
     }
 }
-
-client.login(token);
