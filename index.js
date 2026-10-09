@@ -75,7 +75,7 @@ async function checkRobloxStatusDirect() {
             }
 
             console.log(
-                [LOG] Status voor ${monitoredUser.name}: ${status}
+console.log(`[LOG] Status voor ${monitoredUser.name}: ${status}`);
             );
         });
 
