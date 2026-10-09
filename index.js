@@ -1,88 +1,269 @@
-const { Client, GatewayIntentBits, Events } = require('discord.js');
-const axios = require('axios');
+import os
+import requests
+import discord
+from discord.ext import tasks
 
-console.log("=== OMGEVINGSVARIABELEN CHECK ===");
-console.log("DISCORD_BOT_TOKEN aanwezig:", process.env.DISCORD_BOT_TOKEN ? "JA" : "NEE");
-console.log("DISCORD_CHANNEL_ID aanwezig:", process.env.DISCORD_CHANNEL_ID ? "JA" : "NEE");
-console.log("ROBLOX_USERS aanwezig:", process.env.ROBLOX_USERS ? "JA" : "NEE");
-console.log("=================================");
+# ============================================================
+# CONFIGURATION
+# ============================================================
+# Set these as Railway/environment variables.
+#
+# DISCORD_CHANNEL_ID:
+#   The Discord channel where alerts should be sent.
+#
+# ROBLOX_USERS:
+#   Comma-separated Roblox user IDs.
+#   Example: 123456789:PlayerOne,987654321:PlayerTwo
+#
+# CHECK_INTERVAL:
+#   Seconds between Roblox checks. Default: 15
+#
+# FAILED_CHECKS_REQUIRED:
+#   How many consecutive checks with nobody detected
+#   before an alert is sent. Default: 3
+# ============================================================
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages
-    ]
-});
+DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
 
-const token = process.env.DISCORD_BOT_TOKEN;
-const channelId = process.env.DISCORD_CHANNEL_ID;
-const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
+ROBLOX_USERS = {}
 
-const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
-    if (!u.includes(':')) return null;
-    const [id, name] = u.split(':');
-    return { id: id.trim(), name: name.trim(), isOnline: false };
-}).filter(Boolean);
+for entry in os.getenv("ROBLOX_USERS", "").split(","):
+    entry = entry.strip()
 
-console.log('📡 De Roblox-controlelus is direct gestart op de achtergrond.');
-checkRobloxStatusDirect();
-setInterval(checkRobloxStatusDirect, checkInterval);
+    if not entry:
+        continue
 
-client.once(Events.ClientReady, () => {
-    console.log('🤖 Bot is succesvol opgestart als ' + client.user.tag + '!');
-    console.log('📡 Ik volg momenteel ' + usersToMonitor.length + ' Roblox spelers.');
-});
+    try:
+        user_id, username = entry.split(":", 1)
+        ROBLOX_USERS[int(user_id.strip())] = username.strip()
+    except ValueError:
+        print(
+            "WARNING: Invalid ROBLOX_USERS entry. "
+            "Use ID:Username,ID:Username"
+        )
 
-async function checkRobloxStatusDirect() {
-    try {
-        const idList = usersToMonitor.map(u => u.id);
+CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "15"))
+FAILED_CHECKS_REQUIRED = int(
+    os.getenv("FAILED_CHECKS_REQUIRED", "3")
+)
 
-        if (!idList.length) return;
+# ============================================================
+# DISCORD
+# ============================================================
 
-        const response = await axios.post(
-            'https://presence.roblox.com/v1/presence/users',
-            {
-                userIds: idList
-            },
-            {
-                timeout: 5000
-            }
-        );
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
 
-        const presences = response.data.userPresences;
+# ============================================================
+# STATE
+# ============================================================
 
-        if (!presences) return;
+session_active = False
+players_in_session = set()
+failed_checks = 0
+shutdown_notified = False
 
-        presences.forEach(presence => {
-            const monitoredUser = usersToMonitor.find(
-                u => u.id === presence.userId.toString()
-            );
+# ============================================================
+# ROBLOX PRESENCE
+# ============================================================
 
-            if (!monitoredUser) return;
+def get_presences():
+    if not ROBLOX_USERS:
+        raise RuntimeError("No Roblox users have been configured.")
 
-            const state = presence.userPresenceType;
+    response = requests.post(
+        "https://presence.roblox.com/v1/presence/users",
+        json={"userIds": list(ROBLOX_USERS.keys())},
+        timeout=10
+    )
 
-            let status;
+    response.raise_for_status()
 
-            if (state === 2) {
-                status = 'In Game';
-            } else if (state === 1) {
-                status = 'Online';
-            } else if (state === 4) {
-                status = 'In Studio';
-            } else {
-                status = 'Offline';
-            }
+    return response.json()["userPresences"]
 
-            console.log(
-console.log(`[LOG] Status voor ${monitoredUser.name}: ${status}`);
-            );
-        });
 
-    } catch (error) {
-        console.log(
-            '⚠️ Statusbericht:',
-            error.message
-        );
-    }
-}
+def find_players():
+    presences = get_presences()
+    found = []
+
+    for presence in presences:
+        user_id = presence["userId"]
+
+        if user_id not in ROBLOX_USERS:
+            continue
+
+        # Roblox presence type 2 = currently in a game.
+        if presence.get("userPresenceType") == 2:
+            found.append({
+                "user_id": user_id,
+                "name": ROBLOX_USERS[user_id]
+            })
+
+    return found
+
+# ============================================================
+# DISCORD MESSAGES
+# ============================================================
+
+async def get_alert_channel():
+    try:
+        channel = await client.fetch_channel(DISCORD_CHANNEL_ID)
+        return channel
+    except Exception as error:
+        print("ERROR getting Discord channel:", error)
+        return None
+
+
+async def send_startup_message():
+    channel = await get_alert_channel()
+
+    if channel is None:
+        return
+
+    await channel.send(
+        "🟢 **Roblox Server Monitor is online!**\n"
+        "I am now monitoring the configured Roblox players."
+    )
+
+    print("Startup message sent to Discord.")
+
+
+async def send_shutdown_message():
+    global shutdown_notified
+
+    if shutdown_notified:
+        return
+
+    channel = await get_alert_channel()
+
+    if channel is None:
+        return
+
+    names = ", ".join(sorted(players_in_session))
+
+    message = (
+        "@everyone\n"
+        "🔴 **Roblox private server may have shut down!**\n\n"
+        "**Players previously detected:** "
+        f"{names}\n\n"
+        "None of the monitored players have been detected "
+        f"in-game for {FAILED_CHECKS_REQUIRED * CHECK_INTERVAL} seconds.\n\n"
+        "⚠️ This uses Roblox's public presence API, so it "
+        "detects when the monitored players stop appearing "
+        "in-game. It does not directly verify a specific "
+        "private-server instance."
+    )
+
+    await channel.send(
+        message,
+        allowed_mentions=discord.AllowedMentions(everyone=True)
+    )
+
+    print("🚨 SHUTDOWN ALERT SENT TO DISCORD!")
+
+    shutdown_notified = True
+
+# ============================================================
+# MONITOR
+# ============================================================
+
+@tasks.loop(seconds=CHECK_INTERVAL)
+async def monitor_servers():
+    global session_active
+    global players_in_session
+    global failed_checks
+    global shutdown_notified
+
+    try:
+        players = find_players()
+
+        print("---- Roblox check ----")
+
+        if players:
+            names = ", ".join(
+                player["name"] for player in players
+            )
+            print(f"Players currently in-game: {names}")
+        else:
+            print("None of the monitored players are currently in-game.")
+
+        # Start a monitoring session when at least one
+        # configured player is detected.
+        if not session_active:
+            if players:
+                session_active = True
+
+                players_in_session = {
+                    player["name"] for player in players
+                }
+
+                failed_checks = 0
+                shutdown_notified = False
+
+                print(
+                    "Monitoring session started: "
+                    + ", ".join(sorted(players_in_session))
+                )
+
+            return
+
+        # At least one player is still detected.
+        if players:
+            failed_checks = 0
+
+            for player in players:
+                players_in_session.add(player["name"])
+
+            print("Session still active.")
+            return
+
+        # Nobody is detected.
+        failed_checks += 1
+
+        print(
+            f"Nobody detected "
+            f"({failed_checks}/{FAILED_CHECKS_REQUIRED})"
+        )
+
+        if failed_checks >= FAILED_CHECKS_REQUIRED:
+            print("Possible server shutdown detected.")
+
+            await send_shutdown_message()
+
+            session_active = False
+            players_in_session.clear()
+            failed_checks = 0
+
+    except Exception as error:
+        print("Roblox check error:", error)
+        # API errors do not count toward shutdown detection.
+
+# ============================================================
+# STARTUP
+# ============================================================
+
+@client.event
+async def on_ready():
+    print("----------------------------------------")
+    print("Roblox Server Monitor is online!")
+    print(f"Logged in as: {client.user}")
+    print("----------------------------------------")
+
+    await send_startup_message()
+
+    if not monitor_servers.is_running():
+        monitor_servers.start()
+
+# ============================================================
+# RUN BOT
+# ============================================================
+
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+if not TOKEN:
+    print(
+        "ERROR: DISCORD_BOT_TOKEN environment variable "
+        "has not been configured."
+    )
+else:
+    client.run(TOKEN)
