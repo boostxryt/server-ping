@@ -29,25 +29,16 @@ FAILED_CHECKS_REQUIRED = int(
     os.getenv("FAILED_CHECKS_REQUIRED", "3")
 )
 
-# ============================================================
-# DISCORD
-# ============================================================
-
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
-# ============================================================
-# STATE
-# ============================================================
+
 
 session_active = False
 players_in_session = set()
 failed_checks = 0
 shutdown_notified = False
 
-# ============================================================
-# ROBLOX PRESENCE
-# ============================================================
 
 def get_presences():
     if not ROBLOX_USERS:
@@ -74,7 +65,7 @@ def find_players():
         if user_id not in ROBLOX_USERS:
             continue
 
-        # Roblox presence type 2 = currently in a game.
+      
         if presence.get("userPresenceType") == 2:
             found.append({
                 "user_id": user_id,
@@ -83,9 +74,6 @@ def find_players():
 
     return found
 
-# ============================================================
-# DISCORD MESSAGES
-# ============================================================
 
 async def get_alert_channel():
     try:
@@ -145,9 +133,7 @@ async def send_shutdown_message():
 
     shutdown_notified = True
 
-# ============================================================
-# MONITOR
-# ============================================================
+
 
 @tasks.loop(seconds=CHECK_INTERVAL)
 async def monitor_servers():
@@ -169,8 +155,7 @@ async def monitor_servers():
         else:
             print("None of the monitored players are currently in-game.")
 
-        # Start a monitoring session when at least one
-        # configured player is detected.
+      
         if not session_active:
             if players:
                 session_active = True
@@ -189,7 +174,7 @@ async def monitor_servers():
 
             return
 
-        # At least one player is still detected.
+       
         if players:
             failed_checks = 0
 
@@ -199,7 +184,7 @@ async def monitor_servers():
             print("Session still active.")
             return
 
-        # Nobody is detected.
+       
         failed_checks += 1
 
         print(
@@ -220,10 +205,6 @@ async def monitor_servers():
         print("Roblox check error:", error)
         # API errors do not count toward shutdown detection.
 
-# ============================================================
-# STARTUP
-# ============================================================
-
 @client.event
 async def on_ready():
     print("----------------------------------------")
@@ -236,9 +217,7 @@ async def on_ready():
     if not monitor_servers.is_running():
         monitor_servers.start()
 
-# ============================================================
-# RUN BOT
-# ============================================================
+
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
