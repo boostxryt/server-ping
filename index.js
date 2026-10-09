@@ -3,29 +3,11 @@ import requests
 import discord
 from discord.ext import tasks
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-# Set these as Railway/environment variables.
-#
-# DISCORD_CHANNEL_ID:
-#   The Discord channel where alerts should be sent.
-#
-# ROBLOX_USERS:
-#   Comma-separated Roblox user IDs.
-#   Example: 123456789:PlayerOne,987654321:PlayerTwo
-#
-# CHECK_INTERVAL:
-#   Seconds between Roblox checks. Default: 15
-#
-# FAILED_CHECKS_REQUIRED:
-#   How many consecutive checks with nobody detected
-#   before an alert is sent. Default: 3
-# ============================================================
+
 
 DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
-
-ROBLOX_USERS = {}
+1540280209994162286
+ROBLOX_USERS = {3055067105:BlackwidowX05,1545919573:mittimmy,355852663:degamer567890}
 
 for entry in os.getenv("ROBLOX_USERS", "").split(","):
     entry = entry.strip()
