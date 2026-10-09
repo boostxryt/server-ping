@@ -18,14 +18,12 @@ const token = process.env.DISCORD_BOT_TOKEN;
 const channelId = process.env.DISCORD_CHANNEL_ID;
 const checkInterval = parseInt(process.env.CHECK_INTERVAL || '15') * 1000;
 
-// Haal de spelers strak op uit Railway
 const usersToMonitor = (process.env.ROBLOX_USERS || "").split(',').map(u => {
     if (!u.includes(':')) return null;
     const [id, name] = u.split(':');
     return { id: id.trim(), name: name.trim(), isOnline: false };
 }).filter(Boolean);
 
-// DIT START DE LUS DIRECT OP DE ACHTERGROND, ONAFHANKELIJK VAN DISCORD
 console.log('📡 De Roblox-controlelus is direct gestart op de achtergrond.');
 checkRobloxStatusDirect();
 setInterval(checkRobloxStatusDirect, checkInterval);
@@ -37,26 +35,54 @@ client.once(Events.ClientReady, () => {
 
 async function checkRobloxStatusDirect() {
     try {
-        const idLijst = usersToMonitor.map(u => u.id).join(',');
-        if (!idLijst) return;
+        const idList = usersToMonitor.map(u => u.id);
 
-        // HIER STAAT NU DE VOLLEDIGE, CORRECTE ROBLOX LINK
-        const completeUrl = 'https://roblox.com' + idLijst + '&size=150x150&format=Png&isCircular=false';
-        
-        const response = await axios.get(completeUrl, { timeout: 5000 });
+        if (!idList.length) return;
 
-        if (!response.data || !response.data.data) return;
+        const response = await axios.post(
+            'https://presence.roblox.com/v1/presence/users',
+            {
+                userIds: idList
+            },
+            {
+                timeout: 5000
+            }
+        );
 
-        response.data.data.forEach(playerData => {
-            const monitoredUser = usersToMonitor.find(u => u.id === playerData.targetId.toString());
+        const presences = response.data.userPresences;
+
+        if (!presences) return;
+
+        presences.forEach(presence => {
+            const monitoredUser = usersToMonitor.find(
+                u => u.id === presence.userId.toString()
+            );
+
             if (!monitoredUser) return;
 
-            // Log de status live in Railway om te zien dat er data binnenkomt
-            console.log('[LOG] Status voor ' + monitoredUser.name + ': ' + playerData.state);
+            const state = presence.userPresenceType;
+
+            let status;
+
+            if (state === 2) {
+                status = 'In Game';
+            } else if (state === 1) {
+                status = 'Online';
+            } else if (state === 4) {
+                status = 'In Studio';
+            } else {
+                status = 'Offline';
+            }
+
+            console.log(
+                [LOG] Status voor ${monitoredUser.name}: ${status}
+            );
         });
+
     } catch (error) {
-        console.log('📡 Statusbericht: ' + error.message);
+        console.log(
+            '⚠️ Statusbericht:',
+            error.message
+        );
     }
 }
-
-client.login(token);
