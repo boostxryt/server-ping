@@ -5,8 +5,8 @@ from discord.ext import tasks
 
 
 
-DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "0"))
-1540280209994162286
+DISCORD_CHANNEL_ID = int(os.getenv("DISCORD_CHANNEL_ID", "1540280209994162286"))
+
 ROBLOX_USERS = {3055067105:BlackwidowX05,1545919573:mittimmy,355852663:degamer567890}
 
 for entry in os.getenv("ROBLOX_USERS", "").split(","):
